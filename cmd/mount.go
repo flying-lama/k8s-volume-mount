@@ -1,10 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"k8s-volume-mount/internal"
-
 	"os"
 )
 
@@ -13,8 +13,9 @@ func MountCommand(args []string) error {
 	// Parse command line flags
 	mountCmd := flag.NewFlagSet("mount", flag.ExitOnError)
 	pvcName := mountCmd.String("pvc", "", "Name of the PersistentVolumeClaim")
-	port := mountCmd.Int("port", 0, "Specific port for WebDAV (optional)")
+	port := mountCmd.Int("port", 0, "Specific port for port forwarding (optional)")
 	providerType := mountCmd.String("provider", "webdav", "Provider type: webdav")
+	pauseOnError := mountCmd.Bool("pause-on-error", false, "Wait for user input on error before cleanup")
 	err := mountCmd.Parse(args)
 	if err != nil {
 		return fmt.Errorf("error parsing command line flags: %v", err)
@@ -68,12 +69,19 @@ func MountCommand(args []string) error {
 	fmt.Printf("Mounting volume %s to %s...\n", *pvcName, mountDir)
 	if err := provider.Mount(); err != nil {
 		fmt.Printf("Error mounting volume: %v\n", err)
+
+		if *pauseOnError {
+			fmt.Println("Press Enter to continue with cleanup...")
+			reader := bufio.NewReader(os.Stdin)
+			_, _ = reader.ReadString('\n')
+		}
+
 		fmt.Println("Cleaning up resources...")
 		cleanUpErr := provider.Cleanup()
 		if cleanUpErr != nil {
 			fmt.Printf("Error cleaning up resources: %v\n", cleanUpErr)
 		}
-		return err
+		return fmt.Errorf("failed to mount volume")
 	}
 
 	fmt.Printf("Volume %s successfully mounted at %s using %s\n", *pvcName, mountDir, provider.Name())

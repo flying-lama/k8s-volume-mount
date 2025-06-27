@@ -5,7 +5,7 @@ import (
 	"k8s.io/utils/mount"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"strings"
 )
 
 // DavFSMounter implements the Mounter interface using davfs2
@@ -52,14 +52,6 @@ func (m *DavFSMounter) Mount() (pid int, err error) {
 		return
 	}
 
-	// Create temporary credentials file
-	credsFile := filepath.Join(TempDir, fmt.Sprintf("davfs-%s-%d.creds", filepath.Base(mountDir), port))
-	credsContent := fmt.Sprintf("%s %s", username, password)
-	if err = os.WriteFile(credsFile, []byte(credsContent), 0600); err != nil {
-		err = fmt.Errorf("failed to write credentials file: %v", err)
-		return
-	}
-
 	// Prepare the source URL
 	source := fmt.Sprintf("http://%s:%d/", host, port)
 
@@ -69,43 +61,44 @@ func (m *DavFSMounter) Mount() (pid int, err error) {
 	options := []string{
 		fmt.Sprintf("uid=%d", uid),
 		fmt.Sprintf("gid=%d", gid),
-		"conf=/dev/null",
-		fmt.Sprintf("secrets=%s", credsFile),
 	}
 
-	// Use kubernetes mount utils to mount the filesystem
-	if err = m.mounter.Mount(source, mountDir, "davfs", options); err != nil {
-		removeErr := os.Remove(credsFile)
-		if removeErr != nil {
-			err = fmt.Errorf("failed to remove credentials file: %v", removeErr)
-			return
-		}
-		err = fmt.Errorf("failed to mount with davfs2: %v", err)
-		return
+	// Use direct mount command with credentials in URL
+	mountArgs := []string{
+		"-t", "davfs",
+		"-o", strings.Join(options, ","),
+		source, mountDir,
+	}
+
+	mountCmd := exec.Command("mount", mountArgs...)
+
+	stdin, err := mountCmd.StdinPipe()
+	if err != nil {
+		return 0, fmt.Errorf("failed to create stdin pipe: %v", err)
+	}
+
+	// Start the command
+	if err = mountCmd.Start(); err != nil {
+		return 0, fmt.Errorf("failed to start mount command: %v", err)
+	}
+
+	// Write username and password to stdin
+	_, err = fmt.Fprintf(stdin, "%s\n%s\n", username, password)
+	if err != nil {
+		return 0, fmt.Errorf("failed to write credentials: %v", err)
+	}
+	stdin.Close()
+
+	// Wait for the command to complete
+	if err = mountCmd.Wait(); err != nil {
+		return 0, fmt.Errorf("mount command failed: %v", err)
 	}
 
 	// Check if the mount was successful
-	notMnt, err := m.mounter.IsLikelyNotMountPoint(mountDir)
-	if err != nil {
+	if !IsMountPoint(mountDir) {
 		unmountErr := m.mounter.Unmount(mountDir)
 		if unmountErr != nil {
 			fmt.Printf("failed to unmount davfs: %v\n", unmountErr)
-		}
-		credsRemErr := os.Remove(credsFile)
-		if credsRemErr != nil {
-			fmt.Printf("failed to remove credentials file: %v\n", credsRemErr)
-		}
-		err = fmt.Errorf("error checking mount point: %v", err)
-		return
-	}
-	if notMnt {
-		unmountErr := m.mounter.Unmount(mountDir)
-		if unmountErr != nil {
-			fmt.Printf("failed to unmount davfs: %v\n", unmountErr)
-		}
-		credsRemErr := os.Remove(credsFile)
-		if credsRemErr != nil {
-			fmt.Printf("failed to remove credentials file: %v\n", credsRemErr)
 		}
 		err = fmt.Errorf("expected %s to be a mount point but it is not", mountDir)
 		return
@@ -118,13 +111,6 @@ func (m *DavFSMounter) Mount() (pid int, err error) {
 func (m *DavFSMounter) Unmount() error {
 	if err := m.mounter.Unmount(m.Metadata.MountDir); err != nil {
 		return fmt.Errorf("failed to unmount davfs: %v", err)
-	}
-
-	// Clean up credentials file
-	credsFile := filepath.Join(TempDir, fmt.Sprintf("davfs-%s.creds", filepath.Base(m.Metadata.MountDir)))
-	removeErr := os.Remove(credsFile)
-	if removeErr != nil {
-		return fmt.Errorf("failed to remove credentials file: %v", removeErr)
 	}
 
 	return nil

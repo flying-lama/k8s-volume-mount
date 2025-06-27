@@ -83,6 +83,8 @@ func (m *NFSMounter) Mount() (pid int, err error) {
 			"tcp",
 			"rsize=1048576",
 			"wsize=1048576",
+			fmt.Sprintf("port=%d", port),
+			fmt.Sprintf("mountport=%d", port),
 		}
 
 		// On Linux, use kubernetes mount utils

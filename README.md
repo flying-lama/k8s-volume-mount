@@ -55,12 +55,12 @@ sudo apt-get install nfs-common
 ## Usage
 ### Mount a PVC
 ```bash
-k8s-volume-mount mount -pvc=my-pvc -type=webdav
+k8s-volume-mount mount -pvc=my-pvc -provider=webdav
 ```
 Options:
  - ``pvc``: Name of the PersistentVolumeClaim to mount (required)
  - ``port``: Specific port for local port forwarding (optional, default: auto-detect)
- - ``type``: Provider type to use (optional, default: webdav)
+ - ``provider``: Provider type to use (optional, default: webdav)
    - Available types: webdav, nfs, sftp
 
 ### Unmount a PVC

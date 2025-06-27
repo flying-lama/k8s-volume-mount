@@ -59,5 +59,5 @@ func printUsage() {
 	fmt.Println("\nOptions:")
 	fmt.Println("  -pvc   Name of the PersistentVolumeClaim")
 	fmt.Println("  -port  Specific port for LocalPort Forward (default: auto-detect)")
-	fmt.Println("  -type  Mount type: webdav (default: webdav)")
+	fmt.Println("  -type  Mount type: webdav, sftp, nfs (default: webdav)")
 }
