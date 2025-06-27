@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.ProvisionerName}}
+spec:
+  selector:
+    matchLabels:
+      app: {{.ProvisionerName}}
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: {{.ProvisionerName}}
+    spec:
+      containers:
+      - name: rclone
+        image: rclone/rclone:latest
+        command: {{.Command}}
+        ports:
+        - name: rclone
+          containerPort: {{.ContainerPort}}
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{.PVCName}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{.ProvisionerName}}
+spec:
+  ports:
+  - name: rclone
+    port: {{.ContainerPort}}
+    targetPort: {{.ContainerPort}}
+  selector:
+    app: {{.ProvisionerName}}
