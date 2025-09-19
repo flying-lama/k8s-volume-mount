@@ -47,7 +47,7 @@ func ListCommand(args []string) error {
 			continue
 		}
 
-		mountDir := meta.MountDir
+		mountDir := meta.GetMountDir()
 
 		// Display volume information
 		fmt.Printf("PVC: %s\n", meta.PVCName)

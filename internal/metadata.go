@@ -14,7 +14,7 @@ type Metadata struct {
 	ProviderType      string `json:"providerType"`
 	PVCName           string `json:"pvcName"`
 	Namespace         string `json:"namespace,omitempty"`
-	MountDir          string `json:"mountDir"`
+	CustomMountDir    string `json:"customMountDir"`
 	ConfigDir         string `json:"configDir"`
 	LocalHostname     string `json:"localHostname"`
 	LocalPort         int    `json:"localPort"`
@@ -28,7 +28,7 @@ type Metadata struct {
 }
 
 // NewMetadata creates a new metadata instance for a specific provisioner
-func NewMetadata(providerType string, pvcName string, port int, namespace string) *Metadata {
+func NewMetadata(providerType string, pvcName string, port int) *Metadata {
 	username, err := GenerateRandomString(8)
 	if err != nil {
 		err = fmt.Errorf("failed to generate random username: %v", err)
@@ -49,11 +49,9 @@ func NewMetadata(providerType string, pvcName string, port int, namespace string
 		ProvisionerName: fmt.Sprintf("%s-%s-%d", providerType, pvcName, port),
 		ConfigDir:       GetConfigDir(pvcName),
 		PVCName:         pvcName,
-		Namespace:       namespace,
 		LocalHostname:   "127.0.0.1",
 		LocalPort:       port,
 		RemotePort:      8090,
-		MountDir:        filepath.Join(MountBaseDir, pvcName),
 		MountUsername:   username,
 		MountPassword:   encodedPassword,
 	}
@@ -88,6 +86,14 @@ func GetConfigDir(pvcName string) string {
 // GetConfigFilePath returns the path to the metadata configuration file
 func (m *Metadata) GetConfigFilePath() string {
 	return filepath.Join(m.ConfigDir, "config.json")
+}
+
+func (m *Metadata) GetMountDir() string {
+	if m.CustomMountDir != "" {
+		return m.CustomMountDir
+	}
+
+	return filepath.Join(MountBaseDir, m.PVCName)
 }
 
 // Save stores metadata to a JSON file at the default location

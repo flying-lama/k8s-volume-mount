@@ -2,10 +2,11 @@ package internal
 
 import (
 	"fmt"
-	"k8s.io/utils/mount"
 	"os"
 	"os/exec"
 	"strings"
+
+	"k8s.io/utils/mount"
 )
 
 // NFSMounter implements the Mounter interface using NFS
@@ -31,7 +32,7 @@ func (m *NFSMounter) Name() string {
 
 // Mount mounts an NFS volume
 func (m *NFSMounter) Mount() (pid int, err error) {
-	mountDir := m.Metadata.MountDir
+	mountDir := m.Metadata.GetMountDir()
 	host := m.Metadata.LocalHostname
 	port := m.Metadata.LocalPort
 
@@ -111,7 +112,7 @@ func (m *NFSMounter) Mount() (pid int, err error) {
 
 // Unmount unmounts a volume mounted with NFS
 func (m *NFSMounter) Unmount() error {
-	mountDir := m.Metadata.MountDir
+	mountDir := m.Metadata.GetMountDir()
 
 	// Check if the directory exists
 	if _, err := os.Stat(mountDir); os.IsNotExist(err) {

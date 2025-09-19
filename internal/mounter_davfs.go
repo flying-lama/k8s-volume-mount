@@ -2,10 +2,11 @@ package internal
 
 import (
 	"fmt"
-	"k8s.io/utils/mount"
 	"os"
 	"os/exec"
 	"strings"
+
+	"k8s.io/utils/mount"
 )
 
 // DavFSMounter implements the Mounter interface using davfs2
@@ -31,7 +32,7 @@ func (m *DavFSMounter) Name() string {
 
 // Mount mounts a WebDAV volume using davfs2
 func (m *DavFSMounter) Mount() (pid int, err error) {
-	mountDir := m.Metadata.MountDir
+	mountDir := m.Metadata.GetMountDir()
 	host := m.Metadata.LocalHostname
 	port := m.Metadata.LocalPort
 	username := m.Metadata.MountUsername
@@ -109,7 +110,7 @@ func (m *DavFSMounter) Mount() (pid int, err error) {
 
 // Unmount unmounts a volume mounted with davfs2
 func (m *DavFSMounter) Unmount() error {
-	if err := m.mounter.Unmount(m.Metadata.MountDir); err != nil {
+	if err := m.mounter.Unmount(m.Metadata.GetMountDir()); err != nil {
 		return fmt.Errorf("failed to unmount davfs: %v", err)
 	}
 

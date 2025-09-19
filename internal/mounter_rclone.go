@@ -32,7 +32,7 @@ func (m *RcloneMounter) Name() string {
 
 // Mount mounts a volume using rclone
 func (m *RcloneMounter) Mount() (pid int, err error) {
-	mountDir := m.Metadata.MountDir
+	mountDir := m.Metadata.GetMountDir()
 	host := m.Metadata.LocalHostname
 	port := m.Metadata.LocalPort
 	username := m.Metadata.MountUsername

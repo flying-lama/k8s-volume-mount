@@ -62,7 +62,7 @@ func (p *BaseProvider) GetLogFilePath() string {
 
 // cleanupMount unmounts a volume using the appropriate mounter
 func (p *BaseProvider) cleanupMount() {
-	mountDir := p.Metadata.MountDir
+	mountDir := p.Metadata.GetMountDir()
 	if mountDir == "" {
 		return
 	}
@@ -129,7 +129,7 @@ func (p *BaseProvider) CleanupResources() error {
 	}
 
 	// Delete Mountpoint directory
-	mountDir := p.Metadata.MountDir
+	mountDir := p.Metadata.GetMountDir()
 	if mountDir != "" {
 		err := os.Remove(mountDir)
 		if err != nil {

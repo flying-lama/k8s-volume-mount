@@ -17,6 +17,7 @@ func MountCommand(args []string) error {
 	providerType := mountCmd.String("provider", "webdav", "Provider type: webdav")
 	namespace := mountCmd.String("namespace", "", "Namespace (optional)")
 	pauseOnError := mountCmd.Bool("pause-on-error", false, "Wait for user input on error before cleanup")
+	mountDir := mountCmd.String("mount-dir", "", "Mount directory (optional, default: ~/k8s-mounts)")
 	err := mountCmd.Parse(args)
 	if err != nil {
 		return fmt.Errorf("error parsing command line flags: %v", err)
@@ -42,7 +43,9 @@ func MountCommand(args []string) error {
 		}
 	}
 
-	meta := internal.NewMetadata(*providerType, *pvcName, selectedPort, *namespace)
+	meta := internal.NewMetadata(*providerType, *pvcName, selectedPort)
+	meta.CustomMountDir = *mountDir
+	meta.Namespace = *namespace
 
 	provider := internal.NewProviderFromMetadata(meta)
 	if provider == nil {
@@ -50,14 +53,13 @@ func MountCommand(args []string) error {
 	}
 
 	// Create mount directory
-	mountDir := provider.GetMetadata().MountDir
-	if err := os.MkdirAll(mountDir, 0755); err != nil {
+	if err := os.MkdirAll(meta.GetMountDir(), 0755); err != nil {
 		return fmt.Errorf("error creating mount directory: %v", err)
 	}
 
 	// Check if mount directory is already mounted
 	if _, err := os.Stat(meta.ConfigDir); err == nil {
-		return fmt.Errorf("mount directory %s is already mounted", meta.MountDir)
+		return fmt.Errorf("mount directory %s is already mounted", meta.CustomMountDir)
 	}
 
 	// Deploy provider
@@ -67,7 +69,7 @@ func MountCommand(args []string) error {
 	}
 
 	// Mount volume
-	fmt.Printf("Mounting volume %s to %s...\n", *pvcName, mountDir)
+	fmt.Printf("Mounting volume %s to %s...\n", *pvcName, meta.GetMountDir())
 	if err := provider.Mount(); err != nil {
 		fmt.Printf("Error mounting volume: %v\n", err)
 
@@ -85,7 +87,7 @@ func MountCommand(args []string) error {
 		return fmt.Errorf("failed to mount volume")
 	}
 
-	fmt.Printf("Volume %s successfully mounted at %s using %s\n", *pvcName, mountDir, provider.Name())
+	fmt.Printf("Volume %s successfully mounted at %s using %s\n", *pvcName, meta.GetMountDir(), provider.Name())
 
 	return nil
 }
