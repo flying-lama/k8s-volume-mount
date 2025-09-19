@@ -21,6 +21,7 @@ type RcloneBaseProvider struct {
 // Deploy creates the necessary Kubernetes resources for an Rclone-based provider
 func (p *RcloneBaseProvider) Deploy() error {
 	pvcName := p.Metadata.PVCName
+	namespace := p.Metadata.Namespace
 	port := p.Metadata.LocalPort
 	provisionerName := p.Metadata.ProvisionerName
 	username := p.Metadata.MountUsername
@@ -46,12 +47,14 @@ func (p *RcloneBaseProvider) Deploy() error {
 		Command         string
 		ContainerPort   int
 		PVCName         string
+		Namespace       string
 		RemotePort      int
 	}{
 		ProvisionerName: provisionerName,
 		Command:         formatStringArray(commandArgs),
 		ContainerPort:   p.Metadata.RemotePort,
 		PVCName:         pvcName,
+		Namespace:       namespace,
 	}
 
 	// Parse embedded template
@@ -81,11 +84,11 @@ func (p *RcloneBaseProvider) Deploy() error {
 
 	// Wait for deployment to be ready
 	fmt.Printf("Waiting for %s server for %s to be ready...\n", p.RcloneCommand, pvcName)
-	if err := WaitForDeployment(provisionerName, 60); err != nil {
+	if err := WaitForDeployment(provisionerName, namespace, 60); err != nil {
 		fmt.Printf("Warning: Timeout waiting for %s server: %v\n", p.RcloneCommand, err)
 
 		// Show logs for debugging
-		logs, logErr := GetPodLogs(fmt.Sprintf("app=%s", provisionerName))
+		logs, logErr := GetPodLogs(fmt.Sprintf("app=%s", provisionerName), p.Metadata.Namespace)
 		if logErr == nil {
 			fmt.Printf("Pod logs:\n%s\n", logs)
 		}
@@ -94,7 +97,7 @@ func (p *RcloneBaseProvider) Deploy() error {
 
 	// Start port forwarding
 	fmt.Printf("Starting port forwarding on port %d...\n", port)
-	pid, err := StartPortForwarding(provisionerName, port, p.Metadata.RemotePort, logPath)
+	pid, err := StartPortForwarding(provisionerName, p.Metadata.Namespace, port, p.Metadata.RemotePort, logPath)
 	if err != nil {
 		return fmt.Errorf("error starting port forwarding: %v", err)
 	}

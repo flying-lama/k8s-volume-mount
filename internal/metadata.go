@@ -13,6 +13,7 @@ import (
 type Metadata struct {
 	ProviderType      string `json:"providerType"`
 	PVCName           string `json:"pvcName"`
+	Namespace         string `json:"namespace,omitempty"`
 	MountDir          string `json:"mountDir"`
 	ConfigDir         string `json:"configDir"`
 	LocalHostname     string `json:"localHostname"`
@@ -27,7 +28,7 @@ type Metadata struct {
 }
 
 // NewMetadata creates a new metadata instance for a specific provisioner
-func NewMetadata(providerType string, pvcName string, port int) *Metadata {
+func NewMetadata(providerType string, pvcName string, port int, namespace string) *Metadata {
 	username, err := GenerateRandomString(8)
 	if err != nil {
 		err = fmt.Errorf("failed to generate random username: %v", err)
@@ -48,6 +49,7 @@ func NewMetadata(providerType string, pvcName string, port int) *Metadata {
 		ProvisionerName: fmt.Sprintf("%s-%s-%d", providerType, pvcName, port),
 		ConfigDir:       GetConfigDir(pvcName),
 		PVCName:         pvcName,
+		Namespace:       namespace,
 		LocalHostname:   "127.0.0.1",
 		LocalPort:       port,
 		RemotePort:      8090,

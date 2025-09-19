@@ -15,6 +15,7 @@ func MountCommand(args []string) error {
 	pvcName := mountCmd.String("pvc", "", "Name of the PersistentVolumeClaim")
 	port := mountCmd.Int("port", 0, "Specific port for port forwarding (optional)")
 	providerType := mountCmd.String("provider", "webdav", "Provider type: webdav")
+	namespace := mountCmd.String("namespace", "", "Namespace (optional)")
 	pauseOnError := mountCmd.Bool("pause-on-error", false, "Wait for user input on error before cleanup")
 	err := mountCmd.Parse(args)
 	if err != nil {
@@ -27,7 +28,7 @@ func MountCommand(args []string) error {
 	}
 
 	// Check if PVC exists
-	exists := internal.CheckPVCExists(*pvcName)
+	exists := internal.CheckPVCExists(*pvcName, *namespace)
 	if !exists {
 		return fmt.Errorf("error: PVC %s does not exist", *pvcName)
 	}
@@ -41,7 +42,7 @@ func MountCommand(args []string) error {
 		}
 	}
 
-	meta := internal.NewMetadata(*providerType, *pvcName, selectedPort)
+	meta := internal.NewMetadata(*providerType, *pvcName, selectedPort, *namespace)
 
 	provider := internal.NewProviderFromMetadata(meta)
 	if provider == nil {

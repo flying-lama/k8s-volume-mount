@@ -19,10 +19,16 @@ func ApplyManifest(manifestPath string) error {
 }
 
 // WaitForDeployment waits for a deployment to be ready
-func WaitForDeployment(deploymentName string, timeoutSeconds int) error {
-	cmd := exec.Command("kubectl", "wait", "--for=condition=Available",
+func WaitForDeployment(deploymentName string, namespace string, timeoutSeconds int) error {
+	args := []string{"wait", "--for=condition=Available",
 		fmt.Sprintf("deployment/%s", deploymentName),
-		fmt.Sprintf("--timeout=%ds", timeoutSeconds))
+		fmt.Sprintf("--timeout=%ds", timeoutSeconds)}
+
+	if namespace != "" {
+		args = append(args, "-n", namespace)
+	}
+
+	cmd := exec.Command("kubectl", args...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -32,9 +38,13 @@ func WaitForDeployment(deploymentName string, timeoutSeconds int) error {
 }
 
 // GetPodLogs retrieves logs from pods matching the given selector
-func GetPodLogs(selector string) (string, error) {
+func GetPodLogs(selector string, namespace string) (string, error) {
 	// First get pod names
-	cmd := exec.Command("kubectl", "get", "pods", "-l", selector, "-o", "name")
+	args := []string{"get", "pods", "-l", selector, "-o", "name"}
+	if namespace != "" {
+		args = append(args, "-n", namespace)
+	}
+	cmd := exec.Command("kubectl", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to get pods: %v", err)
@@ -47,7 +57,11 @@ func GetPodLogs(selector string) (string, error) {
 
 	// Get logs from the first pod
 	podName := strings.TrimPrefix(podNames[0], "pod/")
-	cmd = exec.Command("kubectl", "logs", podName)
+	logArgs := []string{"logs", podName}
+	if namespace != "" {
+		logArgs = append(logArgs, "-n", namespace)
+	}
+	cmd = exec.Command("kubectl", logArgs...)
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to get logs: %v", err)
@@ -57,11 +71,17 @@ func GetPodLogs(selector string) (string, error) {
 }
 
 // StartPortForwarding starts port forwarding to a Kubernetes service
-func StartPortForwarding(serviceName string, localPort int, remotePort int, logPath string) (pid int, err error) {
+func StartPortForwarding(serviceName string, namespace string, localPort int, remotePort int, logPath string) (pid int, err error) {
 	// Create a command to run port forwarding
-	cmd := exec.Command("kubectl", "port-forward",
+	args := []string{"port-forward",
 		fmt.Sprintf("svc/%s", serviceName),
-		fmt.Sprintf("%d:%d", localPort, remotePort))
+		fmt.Sprintf("%d:%d", localPort, remotePort)}
+
+	if namespace != "" {
+		args = append(args, "-n", namespace)
+	}
+
+	cmd := exec.Command("kubectl", args...)
 
 	// Redirect output to log file
 	logFile, err := os.Create(logPath)
@@ -103,8 +123,12 @@ func StartPortForwarding(serviceName string, localPort int, remotePort int, logP
 }
 
 // CheckPVCExists checks if a PVC exists in the cluster
-func CheckPVCExists(pvcName string) bool {
-	cmd := exec.Command("kubectl", "get", "pvc", pvcName)
+func CheckPVCExists(pvcName string, namespace string) bool {
+	args := []string{"get", "pvc", pvcName}
+	if namespace != "" {
+		args = append(args, "-n", namespace)
+	}
+	cmd := exec.Command("kubectl", args...)
 	err := cmd.Run()
 	return err == nil
 }

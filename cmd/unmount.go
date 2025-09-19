@@ -21,7 +21,8 @@ func UnmountCommand(args []string) error {
 		return fmt.Errorf("PVC name must be specified")
 	}
 
-	meta := internal.NewMetadata("", *pvcName, 0)
+	// metadata loaded from config - only pvcName is required
+	meta := internal.NewMetadata("", *pvcName, 0, "")
 	if meta.ProviderType == "" {
 		return fmt.Errorf("no mount information found for PVC: %s", *pvcName)
 	}
