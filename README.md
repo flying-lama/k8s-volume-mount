@@ -62,6 +62,9 @@ Options:
  - ``port``: Specific port for local port forwarding (optional, default: auto-detect)
  - ``provider``: Provider type to use (optional, default: webdav)
    - Available types: webdav, nfs, sftp
+ - ``namespace``: k8s namespace
+ - ``pause-on-error`` Wait for user input on error before cleanup (allows debugging)
+ - ``mount-dir`` Mount directory (optional, default: ~/k8s-mounts)
 
 ### Unmount a PVC
 ```bash
