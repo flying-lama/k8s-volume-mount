@@ -55,7 +55,7 @@ sudo apt-get install nfs-common
 ## Usage
 ### Mount a PVC
 ```bash
-k8s-volume-mount mount -pvc=my-pvc -provider=webdav
+k8s-volume-mount mount -pvc my-pvc -namespace my-namespace -provider webdav
 ```
 Options:
  - ``pvc``: Name of the PersistentVolumeClaim to mount (required)
@@ -68,7 +68,27 @@ Options:
 
 ### Unmount a PVC
 ```bash
-k8s-volume-mount unmount -pvc=my-pvc
+k8s-volume-mount cleanup -pvc my-pvc
+```
+
+### Forward remote port to local machine without mounting
+This is useful for cases where you want to manually sync or mount.  
+Example:
+```bash
+$ k8s-volume-mount forward -pvc my-pvc -namespace my-namespace -provider webdav
+```
+```
+Creating webdav provider for PVC my-pvc...
+Waiting for webdav server for my-pvc to be ready...
+Starting port forwarding on port 10000...
+LocalPort 10000 is reachable.
+Volume my-pvc available at port 10000 via webdav server
+k8s-volume-mount config file: /tmp/k8s-volume-mount/my-pvc/config.json
+rclone config file: /tmp/k8s-volume-mount/my-pvc/rclone.conf
+```
+```bash
+rclone sync --config /tmp/k8s-volume-mount/my-pvc/rclone.conf srcDir webdav:/destDir
+k8s-volume-mount cleanup -pvc my-pvc
 ```
 
 ### List mounted PVCs
@@ -109,6 +129,11 @@ Make sure your kubectl is properly configured and you have access to the Kuberne
 ```bash
 kubectl get pvc
 ```
+
+### Write delay and missing files with mount command
+Heavy write operations may cause that files aren't synced or synced with a delay up to 1 minute.  
+Also see [rclone docs](https://rclone.org/commands/rclone_mount/#vfs-cache-mode-writes).  
+You can use ``k8s-volume-mount forward`` with ``rclone sync`` to make write operations reliable.
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.

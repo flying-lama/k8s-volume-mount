@@ -30,7 +30,8 @@ func main() {
 		}
 
 	case "unmount":
-		err := cmd.UnmountCommand(os.Args[2:])
+	case "cleanup":
+		err := cmd.CleanupCommand(os.Args[2:])
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -38,6 +39,13 @@ func main() {
 
 	case "list":
 		err := cmd.ListCommand(os.Args[2:])
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+
+	case "forward":
+		err := cmd.ForwardCommand(os.Args[2:])
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
@@ -53,8 +61,9 @@ func main() {
 func printUsage() {
 	fmt.Println("Usage: k8s-volume-mount [command] [options]")
 	fmt.Println("\nCommands:")
-	fmt.Println("  mount -pvc=NAME [-port=PORT] [-type=TYPE] [-namespace=NAMESPACE] [-pause-on-error] [-mount-dir=DIR]  Mount a volume")
-	fmt.Println("  unmount -pvc=NAME      Unmount a volume")
+	fmt.Println("  mount   -pvc=NAME [-port PORT] [-type TYPE] [-namespace NAMESPACE] [-pause-on-error] [-mount-dir DIR]  Mount a volume")
+	fmt.Println("  forward -pvc=NAME [-port PORT] [-type TYPE] [-namespace NAMESPACE] Forward provider server port to local machine")
+	fmt.Println("  cleanup -pvc=NAME      Unmount a volume and delete associated resources")
 	fmt.Println("  list                   List mounted volumes")
 	fmt.Println("\nOptions:")
 	fmt.Println("  -pvc         Name of the PersistentVolumeClaim")

@@ -33,14 +33,6 @@ func (m *RcloneMounter) Name() string {
 // Mount mounts a volume using rclone
 func (m *RcloneMounter) Mount() (pid int, err error) {
 	mountDir := m.Metadata.GetMountDir()
-	host := m.Metadata.LocalHostname
-	port := m.Metadata.LocalPort
-	username := m.Metadata.MountUsername
-	password, err := m.Metadata.GetDecodedPassword()
-	if err != nil {
-		err = fmt.Errorf("failed to decode password: %v", err)
-		return
-	}
 	providerType := m.Metadata.ProviderType
 
 	// Check if rclone is installed
@@ -59,44 +51,9 @@ func (m *RcloneMounter) Mount() (pid int, err error) {
 	// Create log file path
 	logFile := filepath.Join(configDir, "rclone.log")
 
-	// Obscure the password using rclone
-	obscuredCmd := exec.Command("rclone", "obscure", password)
-	obscuredOutput, err := obscuredCmd.CombinedOutput()
-	if err != nil {
-		err = fmt.Errorf("failed to obscure password: %v", err)
-		return
-	}
-	obscuredPassword := strings.TrimSpace(string(obscuredOutput))
-
 	// Create rclone config file with obscured password
-	configFile := filepath.Join(configDir, "rclone.conf")
-	var configContent string
-
-	switch providerType {
-	case "webdav":
-		configContent = fmt.Sprintf(`[webdav]
-type = webdav
-url = http://%s:%d
-vendor = other
-user = %s
-pass = %s
-`, host, port, username, obscuredPassword)
-	case "sftp":
-		configContent = fmt.Sprintf(`[sftp]
-type = sftp
-hostname = %s
-port = %d
-vendor = other
-user = %s
-pass = %s
-`, host, port, username, obscuredPassword)
-	default:
-		err = fmt.Errorf("unsupported provider type for rclone: %s", providerType)
-		return
-	}
-
-	if err = os.WriteFile(configFile, []byte(configContent), 0600); err != nil {
-		err = fmt.Errorf("failed to write rclone config: %v", err)
+	configFile, err := m.WriteRcloneConfig()
+	if err != nil {
 		return
 	}
 
@@ -147,4 +104,70 @@ func (m *RcloneMounter) Unmount() error {
 	}
 
 	return nil
+}
+
+func (m *RcloneMounter) GetConfig() (content string, err error) {
+	host := m.Metadata.LocalHostname
+	port := m.Metadata.LocalPort
+	username := m.Metadata.MountUsername
+	password, err := m.Metadata.GetDecodedPassword()
+	if err != nil {
+		err = fmt.Errorf("failed to decode password: %v", err)
+		return
+	}
+	providerType := m.Metadata.ProviderType
+
+	// Obscure the password using rclone
+	obscuredCmd := exec.Command("rclone", "obscure", password)
+	obscuredOutput, err := obscuredCmd.CombinedOutput()
+	if err != nil {
+		err = fmt.Errorf("failed to obscure password: %v", err)
+		return
+	}
+	obscuredPassword := strings.TrimSpace(string(obscuredOutput))
+
+	switch providerType {
+	case "webdav":
+		content = fmt.Sprintf(`[webdav]
+type = webdav
+url = http://%s:%d
+vendor = other
+user = %s
+pass = %s
+`, host, port, username, obscuredPassword)
+	case "sftp":
+		content = fmt.Sprintf(`[sftp]
+type = sftp
+hostname = %s
+port = %d
+vendor = other
+user = %s
+pass = %s
+`, host, port, username, obscuredPassword)
+	default:
+		err = fmt.Errorf("unsupported provider type for rclone: %s", providerType)
+		return
+	}
+
+	return
+}
+
+func (m *RcloneMounter) GetRcloneConfigFilePath() string {
+	return filepath.Join(m.Metadata.ConfigDir, "rclone.conf")
+}
+
+func (m *RcloneMounter) WriteRcloneConfig() (configFile string, err error) {
+	configFile = m.GetRcloneConfigFilePath()
+	configContent, err := m.GetConfig()
+	if err != nil {
+		err = fmt.Errorf("failed to generate rclone config: %v", err)
+		return
+	}
+
+	if err = os.WriteFile(configFile, []byte(configContent), 0600); err != nil {
+		err = fmt.Errorf("failed to write rclone config: %v", err)
+		return
+	}
+
+	return
 }

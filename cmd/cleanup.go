@@ -6,8 +6,8 @@ import (
 	"k8s-volume-mount/internal"
 )
 
-// UnmountCommand handles the unmount command execution
-func UnmountCommand(args []string) error {
+// CleanupCommand handles the unmount command execution
+func CleanupCommand(args []string) error {
 	// Parse command line flags
 	unmountCmd := flag.NewFlagSet("unmount", flag.ExitOnError)
 	pvcName := unmountCmd.String("pvc", "", "Name of the PersistentVolumeClaim")
